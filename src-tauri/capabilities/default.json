@@ -1,21 +1,43 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "enables the default permissions",
+  "description": "Default permissions for all platforms",
   "windows": ["main"],
   "permissions": [
     "core:default",
     "shell:default",
     "updater:default",
     "process:default",
+    "dialog:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://booth.pm/**"
+        },
+        {
+          "url": "https://*.booth.pm/**"
+        }
+      ]
+    },
     {
       "identifier": "http:default",
       "allow": [
-        { "url": "https://booth.pm/**" },
-        { "url": "https://*.booth.pm/**" },
-        { "url": "https://lingva.ml/**" },
-        { "url": "https://lingva.lunar.icu/**" },
-        { "url": "https://translate.plausibility.cloud/**" }
+        {
+          "url": "https://booth.pm/**"
+        },
+        {
+          "url": "https://*.booth.pm/**"
+        },
+        {
+          "url": "https://lingva.ml/**"
+        },
+        {
+          "url": "https://lingva.lunar.icu/**"
+        },
+        {
+          "url": "https://translate.plausibility.cloud/**"
+        }
       ]
     }
   ]

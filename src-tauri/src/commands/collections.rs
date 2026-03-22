@@ -48,6 +48,12 @@ pub struct CreateCollectionParams {
     pub color: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct CollectionOrderUpdate {
+    pub id: i64,
+    pub sort_order: i64,
+}
+
 // ── Collections CRUD ───────────────────────────────────
 
 #[tauri::command]
@@ -132,6 +138,23 @@ pub fn update_collection_color(
 pub fn delete_collection(db: State<'_, AppDatabase>, id: i64) -> AppResult<()> {
     let conn = db.conn()?;
     conn.execute("DELETE FROM collections WHERE id = ?1", params![id])?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_collection_order(
+    db: State<'_, AppDatabase>,
+    updates: Vec<CollectionOrderUpdate>,
+) -> AppResult<()> {
+    let mut conn = db.conn_mut()?;
+    let tx = conn.transaction()?;
+    for update in updates {
+        tx.execute(
+            "UPDATE collections SET sort_order = ?1 WHERE id = ?2",
+            params![update.sort_order, update.id],
+        )?;
+    }
+    tx.commit()?;
     Ok(())
 }
 
@@ -307,4 +330,50 @@ pub fn get_all_user_tags(db: State<'_, AppDatabase>) -> AppResult<Vec<String>> {
         .query_map([], |row| row.get(0))?
         .collect::<Result<Vec<String>, _>>()?;
     Ok(rows)
+}
+
+// ── Auto-add tags configuration ─────────────────────────
+
+#[tauri::command]
+pub fn get_auto_tags_config(
+    db: State<'_, AppDatabase>,
+) -> AppResult<std::collections::HashMap<i64, Vec<String>>> {
+    let conn = db.conn()?;
+    let mut stmt = conn.prepare(
+        "SELECT collection_id, tag FROM collection_auto_tags ORDER BY collection_id, tag",
+    )?;
+    let mut map: std::collections::HashMap<i64, Vec<String>> = std::collections::HashMap::new();
+    let mut rows = stmt.query([])?;
+    while let Some(row) = rows.next()? {
+        let collection_id: i64 = row.get(0)?;
+        let tag: String = row.get(1)?;
+        map.entry(collection_id).or_default().push(tag);
+    }
+    Ok(map)
+}
+
+#[tauri::command]
+pub fn set_collection_auto_tags(
+    db: State<'_, AppDatabase>,
+    collection_id: i64,
+    tags: Vec<String>,
+) -> AppResult<()> {
+    let mut conn = db.conn_mut()?;
+    let tx = conn.transaction()?;
+    tx.execute(
+        "DELETE FROM collection_auto_tags WHERE collection_id = ?1",
+        params![collection_id],
+    )?;
+    for tag in &tags {
+        let trimmed = tag.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        tx.execute(
+            "INSERT OR IGNORE INTO collection_auto_tags (collection_id, tag) VALUES (?1, ?2)",
+            params![collection_id, trimmed],
+        )?;
+    }
+    tx.commit()?;
+    Ok(())
 }

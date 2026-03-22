@@ -4,12 +4,15 @@ import {
   createCollection,
   renameCollection,
   deleteCollection,
+  updateCollectionOrder,
   addToCollection,
   removeFromCollection,
   getCollectionItems,
   getAllUserTags,
   getAllItemTagsBatch,
   getAllItemCollectionsBatch,
+  getAutoTagsConfig,
+  setCollectionAutoTags,
 } from '../lib/booth-api';
 import type { FavoriteItem } from '../lib/types';
 
@@ -40,6 +43,11 @@ export function useCollections() {
     },
   });
 
+  const reorderMut = useMutation({
+    mutationFn: (updates: { id: number; sort_order: number }[]) => updateCollectionOrder(updates),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['collections'] }),
+  });
+
   const addItemMut = useMutation({
     mutationFn: (params: { collectionId: number; itemId: number }) =>
       addToCollection(params.collectionId, params.itemId),
@@ -62,14 +70,22 @@ export function useCollections() {
     },
   });
 
+  const setAutoTagsMut = useMutation({
+    mutationFn: (params: { collectionId: number; tags: string[] }) =>
+      setCollectionAutoTags(params.collectionId, params.tags),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['auto-tags-config'] }),
+  });
+
   return {
     collections: collectionsQuery.data ?? [],
     isLoading: collectionsQuery.isLoading,
     create: createMut.mutateAsync,
     rename: renameMut.mutateAsync,
     remove: deleteMut.mutateAsync,
+    reorder: reorderMut.mutateAsync,
     addItem: addItemMut.mutateAsync,
     removeItem: removeItemMut.mutateAsync,
+    setAutoTags: setAutoTagsMut.mutateAsync,
   };
 }
 
@@ -85,6 +101,14 @@ export function useAllUserTags() {
   return useQuery<string[]>({
     queryKey: ['all-user-tags'],
     queryFn: getAllUserTags,
+  });
+}
+
+export function useAutoTagsConfig() {
+  return useQuery<Record<string, string[]>>({
+    queryKey: ['auto-tags-config'],
+    queryFn: getAutoTagsConfig,
+    staleTime: 60 * 1000,
   });
 }
 

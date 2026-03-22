@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Link2, Languages, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -7,7 +7,7 @@ import { useI18n } from '../../lib/i18n';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import FavoriteButton from '../favorites/FavoriteButton';
-import { useTranslation } from '../../hooks/useTranslation';
+import { performTranslation } from '../../hooks/useTranslation';
 
 interface Props {
   item: BoothItem;
@@ -16,12 +16,45 @@ interface Props {
   onRemoveFavorite: (itemId: number) => Promise<void>;
 }
 
+interface TranslationState {
+  text: string | null;
+  loading: boolean;
+  visible: boolean;
+  error: boolean;
+}
+
+const INITIAL_TRANSLATION: TranslationState = {
+  text: null,
+  loading: false,
+  visible: false,
+  error: false,
+};
+
 export default memo(function ItemCard({ item, favorited, onAddFavorite, onRemoveFavorite }: Props) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const thumbnail = item.images[0] || '';
   const priceText = item.price === 0 ? t.item.free : `¥${item.price.toLocaleString()}`;
-  const { translatedText, isTranslating, isTranslationVisible, translationError, translate } =
-    useTranslation();
+  const [tr, setTr] = useState<TranslationState>(INITIAL_TRANSLATION);
+
+  const handleTranslate = async () => {
+    // Toggle off if already visible
+    if (tr.visible) {
+      setTr((s) => ({ ...s, visible: false }));
+      return;
+    }
+    // Show cached result if available
+    if (tr.text) {
+      setTr((s) => ({ ...s, visible: true }));
+      return;
+    }
+    setTr({ text: null, loading: true, visible: false, error: false });
+    try {
+      const translated = await performTranslation(item.name, language);
+      setTr({ text: translated, loading: false, visible: true, error: false });
+    } catch {
+      setTr({ text: null, loading: false, visible: false, error: true });
+    }
+  };
 
   const handleCopyLink = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -55,7 +88,7 @@ export default memo(function ItemCard({ item, favorited, onAddFavorite, onRemove
             <TooltipTrigger asChild>
               <button
                 onClick={handleCopyLink}
-                className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+                className="absolute top-1.5 right-1.5 p-2 md:p-1.5 bg-black/50 text-white rounded-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-black/70"
               >
                 <Link2 className="w-3.5 h-3.5" />
               </button>
@@ -64,7 +97,7 @@ export default memo(function ItemCard({ item, favorited, onAddFavorite, onRemove
           </Tooltip>
         </div>
       </Link>
-      <div className="p-3">
+      <div className="p-2 md:p-3">
         <div className="flex items-start justify-between gap-1">
           <div className="flex-1 min-w-0">
             <div className="flex items-start gap-1">
@@ -72,7 +105,7 @@ export default memo(function ItemCard({ item, favorited, onAddFavorite, onRemove
                 <TooltipTrigger asChild>
                   <Link
                     to={`/item/${item.id}`}
-                    className="text-sm font-medium text-gray-900 line-clamp-2 hover:text-indigo-600 flex-1"
+                    className="text-xs md:text-sm font-medium text-gray-900 line-clamp-2 hover:text-indigo-600 flex-1"
                   >
                     {item.name}
                   </Link>
@@ -80,23 +113,19 @@ export default memo(function ItemCard({ item, favorited, onAddFavorite, onRemove
                 <TooltipContent>{item.name}</TooltipContent>
               </Tooltip>
               <button
-                onClick={() => translate(item.name)}
-                className="p-0.5 text-gray-400 hover:text-indigo-600 transition-colors shrink-0"
+                onClick={handleTranslate}
+                className="p-2 md:p-0.5 text-gray-400 hover:text-indigo-600 transition-colors shrink-0"
                 title={t.translation.button}
               >
-                {isTranslating ? (
+                {tr.loading ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
                   <Languages className="w-3.5 h-3.5" />
                 )}
               </button>
             </div>
-            {isTranslationVisible && translatedText && (
-              <p className="text-xs text-indigo-600 mt-0.5">{translatedText}</p>
-            )}
-            {translationError && (
-              <p className="text-xs text-red-400 mt-0.5">{t.translation.error}</p>
-            )}
+            {tr.visible && tr.text && <p className="text-xs text-indigo-600 mt-0.5">{tr.text}</p>}
+            {tr.error && <p className="text-xs text-red-400 mt-0.5">{t.translation.error}</p>}
           </div>
           <FavoriteButton
             item={item}
@@ -105,25 +134,27 @@ export default memo(function ItemCard({ item, favorited, onAddFavorite, onRemove
             onRemove={onRemoveFavorite}
           />
         </div>
-        <div className="mt-2 flex items-center justify-between">
+        <div className="mt-1.5 md:mt-2 flex items-center justify-between">
           <span
-            className={`text-sm font-bold ${item.price === 0 ? 'text-green-600' : 'text-gray-900'}`}
+            className={`text-xs md:text-sm font-bold ${item.price === 0 ? 'text-green-600' : 'text-gray-900'}`}
           >
             {priceText}
           </span>
           {item.shop_name && (
-            <span className="text-xs text-gray-500 truncate max-w-[120px]">{item.shop_name}</span>
+            <span className="text-[10px] md:text-xs text-gray-500 truncate max-w-[80px] md:max-w-[120px]">
+              {item.shop_name}
+            </span>
           )}
         </div>
-        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+        <div className="mt-1 md:mt-1.5 flex items-center gap-1 md:gap-1.5 flex-wrap">
           {item.category_name && (
-            <Badge variant="secondary" className="text-xs text-gray-500 bg-gray-100">
+            <Badge variant="secondary" className="text-[10px] md:text-xs text-gray-500 bg-gray-100">
               {item.category_name}
             </Badge>
           )}
           {item.wish_lists_count != null && (
-            <span className="flex items-center gap-0.5 text-xs text-pink-500">
-              <Heart className="w-3 h-3" fill="currentColor" />
+            <span className="flex items-center gap-0.5 text-[10px] md:text-xs text-pink-500">
+              <Heart className="w-2.5 h-2.5 md:w-3 md:h-3" fill="currentColor" />
               {item.wish_lists_count.toLocaleString()}
             </span>
           )}

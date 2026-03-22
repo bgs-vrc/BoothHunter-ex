@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useSearch } from '../hooks/useSearch';
 import { useSearchContext } from '../lib/SearchContext';
 import SearchBar from '../components/search/SearchBar';
@@ -34,6 +35,12 @@ export default function SearchPage() {
     search(keyword, { category: extra?.category ?? activeCategory ?? undefined, ...extra });
   };
 
+  useEffect(() => {
+    if (hasSearched) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentPage, hasSearched]);
+
   const handleClearCategory = () => {
     setActiveCategory(null);
     if (hasSearched) {
@@ -50,20 +57,23 @@ export default function SearchPage() {
   const categoryLabel = activeCategory ? getCategoryLabel(activeCategory, t) : null;
 
   return (
-    <div className="p-6">
+    <div className="p-3 md:p-6 pb-20 lg:pb-6">
       <div className="max-w-7xl mx-auto">
-        <SearchBar
-          onSearch={handleSearch}
-          initialKeyword={currentParams?.keyword}
-          isLoading={isLoading}
-        />
+        {/* Mobile: fixed above bottom tab bar / Desktop: static at top */}
+        <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] inset-x-0 z-30 bg-white/95 backdrop-blur-sm border-t border-gray-200 px-3 py-2 lg:static lg:bg-transparent lg:backdrop-blur-none lg:border-t-0 lg:px-0 lg:py-0">
+          <SearchBar
+            onSearch={handleSearch}
+            initialKeyword={currentParams?.keyword}
+            isLoading={isLoading}
+          />
+        </div>
 
         {/* Active category badge */}
         {categoryLabel && (
           <div className="mt-2 flex items-center gap-2">
             <Badge className="gap-1 bg-indigo-100 text-indigo-700 border-transparent hover:bg-indigo-100">
               {categoryLabel}
-              <button onClick={handleClearCategory} className="ml-0.5 hover:text-indigo-900">
+              <button onClick={handleClearCategory} className="ml-0.5 p-0.5 hover:text-indigo-900">
                 <X className="w-3 h-3" />
               </button>
             </Badge>

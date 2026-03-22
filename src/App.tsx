@@ -13,6 +13,7 @@ import SearchPage from './pages/SearchPage';
 import FavoritesPage from './pages/FavoritesPage';
 import StatsPage from './pages/StatsPage';
 import ItemDetailPage from './pages/ItemDetailPage';
+import SettingsPage from './pages/SettingsPage';
 
 interface UpdateInfo {
   version: string;
@@ -55,6 +56,7 @@ function App() {
                     <Route path="/" element={<SearchPage />} />
                     <Route path="/favorites" element={<FavoritesPage />} />
                     <Route path="/stats" element={<StatsPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
                     <Route path="/item/:id" element={<ItemDetailPage />} />
                   </Routes>
                 </AppLayout>

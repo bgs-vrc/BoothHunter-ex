@@ -27,6 +27,7 @@ export interface Translations {
     free: string;
     openInBooth: string;
     price: string;
+    openAssetFolder: string;
     shop: string;
     category: string;
     tags: string;
@@ -41,13 +42,18 @@ export interface Translations {
     stats: string;
     history: string;
     vrchat: string;
+    settings: string;
     allCategories: string;
+    category: string;
+    language: string;
+    languageHint: string;
   };
   filter: {
     category: string;
     sort: string;
     priceRange: string;
     freeOnly: string;
+    freeShort: string;
     apply: string;
     reset: string;
     filter: string;
@@ -77,6 +83,7 @@ export interface Translations {
     next: string;
     linkCopied: string;
     copyLink: string;
+    unclassified: string;
   };
   translation: {
     button: string;
@@ -129,20 +136,47 @@ export interface Translations {
     tagAdd: string;
     tagRemove: string;
     clipboardWrite: string;
+    folderNotFound: string;
+    basePathNotSet: string;
   };
   errorBoundary: {
     unexpected: string;
   };
   settings: {
     title: string;
-    language: string;
-    languageHint: string;
+    database: {
+      title: string;
+      description: string;
+      placeholder: string;
+      browse: string;
+      moving: string;
+    };
+    assetFolder: {
+      title: string;
+      description: string;
+      placeholder: string;
+      browse: string;
+    };
+    autoCollection: {
+      title: string;
+      description: string;
+      allCollections: string;
+      autoCollections: string;
+      addTagPlaceholder: string;
+      tagDescription: string;
+      noTags: string;
+    };
+    save: string;
+    saved: string;
   };
   sort: {
     new: string;
+    oldest: string;
     popular: string;
     priceAsc: string;
     priceDesc: string;
+    category: string;
+    shop: string;
   };
   categories: {
     '3Dキャラクター': string;

@@ -84,7 +84,9 @@ export default function TagEditor({ itemId, tags, allUserTags, onSetTags }: Prop
               setShowSuggestions(true);
             }}
             onFocus={() => setShowSuggestions(true)}
-            onBlur={() => { blurTimeoutRef.current = setTimeout(() => setShowSuggestions(false), 150); }}
+            onBlur={() => {
+              blurTimeoutRef.current = setTimeout(() => setShowSuggestions(false), 150);
+            }}
             onKeyDown={handleKeyDown}
             placeholder={tags.length === 0 ? t.tags.addTag : '+'}
             maxLength={100}

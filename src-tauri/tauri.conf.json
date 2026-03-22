@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "BoothHunter",
-  "version": "0.3.0",
+  "productName": "BoothHunter-ex",
+  "version": "1.0.0",
   "identifier": "com.boothhunter.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "BoothHunter - Booth.pm 검색",
+        "title": "BoothHunter-ex - Booth.pm 검색",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
@@ -28,7 +28,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "createUpdaterArtifacts": true,
+    "createUpdaterArtifacts": false,
     "shortDescription": "Search and manage VRChat items from Booth.pm",
     "category": "Utility",
     "icon": [

@@ -1,6 +1,6 @@
 import { memo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Trash2 } from 'lucide-react';
+import { Heart, Trash2, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFavorites } from '../../hooks/useFavorites';
 import {
@@ -10,6 +10,7 @@ import {
   useAllItemCollectionsBatch,
 } from '../../hooks/useCollections';
 import { setItemTags } from '../../lib/booth-api';
+import { openAssetFolder } from '../../lib/settings';
 import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '../../lib/i18n';
 import type { FavoriteItem } from '../../lib/types';
@@ -54,7 +55,7 @@ export default memo(function FavoritesList({ items }: Props) {
 
   if (isLoading && !items) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="rounded-lg border border-gray-200 overflow-hidden">
             <Skeleton className="aspect-square w-full" />
@@ -78,7 +79,10 @@ export default memo(function FavoritesList({ items }: Props) {
   }
 
   return (
-    <div role="list" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+    <div
+      role="list"
+      className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4"
+    >
       {displayItems.map((fav) => (
         <div
           key={fav.id}
@@ -114,48 +118,70 @@ export default memo(function FavoritesList({ items }: Props) {
                 </TooltipTrigger>
                 <TooltipContent>{fav.name}</TooltipContent>
               </Tooltip>
-              <div className="flex items-center shrink-0">
-                <AddToCollectionMenu
-                  itemId={fav.item_id}
-                  collections={collections}
-                  memberCollectionIds={collectionsBatch?.[fav.item_id] ?? []}
-                  onAddToCollection={addItem}
-                  onRemoveFromCollection={removeItem}
-                />
-                <AlertDialog>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <AlertDialogTrigger asChild>
-                        <button className="p-1 text-gray-300 hover:text-red-500 transition-colors">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </AlertDialogTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent>{t.favorites.removed}</TooltipContent>
-                  </Tooltip>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>{t.favorites.confirmDeleteTitle}</AlertDialogTitle>
-                      <AlertDialogDescription>{t.favorites.confirmDeleteDesc}</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{t.favorites.cancelButton}</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={async () => {
-                          try {
-                            await removeFavorite(fav.item_id);
-                          } catch (e) {
-                            console.error('Remove failed:', e);
-                            toast.error(t.errors.favoriteRemove);
-                          }
-                        }}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        {t.favorites.deleteButton}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+              <div className="flex flex-col items-end shrink-0">
+                <div className="flex items-center">
+                  <AddToCollectionMenu
+                    itemId={fav.item_id}
+                    collections={collections}
+                    memberCollectionIds={collectionsBatch?.[fav.item_id] ?? []}
+                    onAddToCollection={addItem}
+                    onRemoveFromCollection={removeItem}
+                  />
+                  <AlertDialog>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertDialogTrigger asChild>
+                          <button className="p-1 text-gray-300 hover:text-red-500 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </AlertDialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>{t.favorites.removed}</TooltipContent>
+                    </Tooltip>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t.favorites.confirmDeleteTitle}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t.favorites.confirmDeleteDesc}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t.favorites.cancelButton}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={async () => {
+                            try {
+                              await removeFavorite(fav.item_id);
+                            } catch (e) {
+                              console.error('Remove failed:', e);
+                              toast.error(t.errors.favoriteRemove);
+                            }
+                          }}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {t.favorites.deleteButton}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openAssetFolder(fav.item_id, fav.name).catch((err) => {
+                          console.error('Failed to open folder:', err);
+                          toast.error('Failed to open folder');
+                        });
+                      }}
+                      className="p-1 text-gray-400 hover:text-indigo-600 transition-colors"
+                      aria-label={t.item.openAssetFolder}
+                    >
+                      <FolderOpen className="w-4 h-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t.item.openAssetFolder}</TooltipContent>
+                </Tooltip>
               </div>
             </div>
             <div className="mt-2 flex items-center justify-between">

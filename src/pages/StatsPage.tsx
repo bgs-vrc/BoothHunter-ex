@@ -83,7 +83,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <Card>
       <section aria-labelledby={headingId}>
         <CardHeader className="pb-2">
-          <CardTitle id={headingId} className="text-sm font-semibold text-gray-700">{title}</CardTitle>
+          <CardTitle id={headingId} className="text-sm font-semibold text-gray-700">
+            {title}
+          </CardTitle>
         </CardHeader>
         <CardContent>{children}</CardContent>
       </section>
@@ -100,7 +102,7 @@ export default function StatsPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <div className="max-w-6xl mx-auto space-y-6">
           <Skeleton className="h-8 w-48" />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -134,7 +136,7 @@ export default function StatsPage() {
   const monthMax = maxOf(monthly);
 
   return (
-    <div className="p-6">
+    <div className="p-3 md:p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         <h2 className="text-xl font-bold text-gray-900">{t.stats.title}</h2>
 
@@ -153,7 +155,12 @@ export default function StatsPage() {
             value={stats?.collections_count ?? 0}
             color="bg-indigo-500"
           />
-          <StatCard icon={Tag} label={t.stats.tags} value={stats?.tags_count ?? 0} color="bg-amber-500" />
+          <StatCard
+            icon={Tag}
+            label={t.stats.tags}
+            value={stats?.tags_count ?? 0}
+            color="bg-amber-500"
+          />
           <StatCard
             icon={Search}
             label={t.stats.totalSearches}

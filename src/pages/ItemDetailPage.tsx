@@ -20,7 +20,9 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { Skeleton } from '@/components/ui/skeleton';
 import FavoriteButton from '../components/favorites/FavoriteButton';
 import { useTranslation } from '../hooks/useTranslation';
-import { open } from '@tauri-apps/plugin-shell';
+import { openUrl } from '@tauri-apps/plugin-opener';
+import { openAssetFolder } from '../lib/settings';
+import { FolderOpen } from 'lucide-react';
 
 export default function ItemDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -67,7 +69,7 @@ export default function ItemDetailPage() {
 
   if (isNaN(itemId)) {
     return (
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <Link
           to="/"
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
@@ -87,7 +89,7 @@ export default function ItemDetailPage() {
       const host = parsed.hostname;
       const validHost = host === 'booth.pm' || /^[\w-]+\.booth\.pm$/.test(host);
       if (parsed.protocol === 'https:' && validHost) {
-        await open(item.url);
+        await openUrl(item.url);
       }
     } catch {
       // URL parsing failed or open failed — no action needed
@@ -105,9 +107,27 @@ export default function ItemDetailPage() {
     );
   };
 
+  const handleOpenAssetFolder = async () => {
+    if (!item) return;
+    try {
+      await openAssetFolder(item.id, item.name);
+    } catch (error) {
+      console.error('Failed to open asset folder:', error);
+      // Check if error message contains specific strings to give better feedback?
+      // For now generic error or the error message if it's from backend
+      if (typeof error === 'string' && error.includes('Asset folder not found')) {
+        toast.error(t.errors.folderNotFound);
+      } else if (typeof error === 'string' && error.includes('Base path does not exist')) {
+        toast.error(t.errors.folderNotFound); // Or specific error
+      } else {
+        toast.error(t.errors.folderNotFound);
+      }
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <div className="max-w-5xl mx-auto">
           <Skeleton className="h-5 w-24 mb-4" />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -127,7 +147,7 @@ export default function ItemDetailPage() {
 
   if (error || !item) {
     return (
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         <Link
           to="/"
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
@@ -143,7 +163,7 @@ export default function ItemDetailPage() {
   const priceText = item.price === 0 ? t.item.free : `¥${item.price.toLocaleString()}`;
 
   return (
-    <div className="p-6">
+    <div className="p-3 md:p-6">
       <div className="max-w-5xl mx-auto">
         <Link
           to="/"
@@ -286,10 +306,18 @@ export default function ItemDetailPage() {
               </div>
             )}
 
-            <Button onClick={handleOpenInBooth} className="mt-6">
-              <ExternalLink className="w-4 h-4" />
-              {t.item.openInBooth}
-            </Button>
+            <div className="flex flex-wrap gap-3 mt-6">
+              <Button onClick={handleOpenInBooth}>
+                <ExternalLink className="w-4 h-4" />
+                {t.item.openInBooth}
+              </Button>
+              {isFavorite(item.id) && (
+                <Button variant="outline" onClick={handleOpenAssetFolder}>
+                  <FolderOpen className="w-4 h-4" />
+                  {t.item.openAssetFolder}
+                </Button>
+              )}
+            </div>
 
             {item.description && (
               <div className="mt-6">

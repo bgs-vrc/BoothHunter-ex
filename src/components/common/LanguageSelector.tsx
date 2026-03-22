@@ -32,7 +32,7 @@ export default function LanguageSelector() {
             </Select>
           </div>
         </TooltipTrigger>
-        <TooltipContent side="right">{t.settings.languageHint}</TooltipContent>
+        <TooltipContent side="right">{t.nav.languageHint}</TooltipContent>
       </Tooltip>
     </div>
   );

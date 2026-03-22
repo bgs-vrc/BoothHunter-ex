@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getFavorites,
   addFavorite as addFavoriteApi,
   removeFavorite as removeFavoriteApi,
+  getAutoTagsConfig,
+  addToCollection,
 } from '../lib/booth-api';
 import type { BoothItem, FavoriteItem } from '../lib/types';
 
@@ -32,6 +34,26 @@ export function useFavorites() {
         category_name: item.category_name,
         shop_name: item.shop_name,
       });
+
+      // Handle auto-add by tags
+      try {
+        const autoTags = await getAutoTagsConfig();
+        const promises = [];
+        for (const [colIdStr, triggerTags] of Object.entries(autoTags)) {
+          if (triggerTags.length > 0 && triggerTags.some((tag) => item.tags.includes(tag))) {
+            promises.push(addToCollection(Number(colIdStr), item.id));
+          }
+        }
+        if (promises.length > 0) {
+          await Promise.allSettled(promises);
+          queryClient.invalidateQueries({ queryKey: ['collections'] });
+          queryClient.invalidateQueries({ queryKey: ['collection-items'] });
+          queryClient.invalidateQueries({ queryKey: ['item-collections'] });
+          queryClient.invalidateQueries({ queryKey: ['all-item-collections-batch'] });
+        }
+      } catch (err) {
+        console.error('Auto-collection add failed:', err);
+      }
     },
     onMutate: async (item: BoothItem) => {
       await queryClient.cancelQueries({ queryKey: ['favorites'] });
@@ -84,7 +106,10 @@ export function useFavorites() {
     },
   });
 
-  const isFavorite = (itemId: number): boolean => favoriteIdSet.has(itemId);
+  const isFavorite = useCallback(
+    (itemId: number): boolean => favoriteIdSet.has(itemId),
+    [favoriteIdSet],
+  );
 
   return {
     favorites,

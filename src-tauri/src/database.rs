@@ -7,16 +7,12 @@ use crate::error::{AppError, AppResult};
 
 pub struct AppDatabase {
     conn: Mutex<Connection>,
+    pub db_dir: Mutex<PathBuf>,
 }
 
 impl AppDatabase {
-    pub fn initialize(app_data_dir: PathBuf) -> Result<Self, AppError> {
-        std::fs::create_dir_all(&app_data_dir)
-            .map_err(|e| AppError::Database(format!("Failed to create data dir: {}", e)))?;
-
-        let db_path = app_data_dir.join("boothhunter.db");
-        let conn = Connection::open(&db_path)?;
-
+    
+    fn setup_connection(conn: &Connection) -> Result<(), AppError> {
         conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys = ON;")?;
 
         // Idempotent migrations
@@ -152,8 +148,39 @@ impl AppDatabase {
             [],
         )?;
 
-        Ok(Self {
+        // Migration v7: settings table
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TEXT DEFAULT (datetime('now'))
+            );",
+        )?;
+
+        // Migration v8: collection auto tags
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS collection_auto_tags (
+                collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+                tag TEXT NOT NULL,
+                PRIMARY KEY (collection_id, tag)
+            );
+            CREATE INDEX IF NOT EXISTS idx_collection_auto_tags_tag ON collection_auto_tags(tag);"
+        )?;
+        Ok(())
+    }
+
+    pub fn initialize(db_dir: PathBuf, _app_data_dir: PathBuf) -> Result<Self, AppError> {
+        std::fs::create_dir_all(&db_dir)
+            .map_err(|e| AppError::Database(format!("Failed to create data dir: {}", e)))?;
+
+        let db_path = db_dir.join("boothhunter.db");
+        let conn = Connection::open(&db_path)?;
+
+        Self::setup_connection(&conn)?;
+
+                Ok(Self {
             conn: Mutex::new(conn),
+            db_dir: Mutex::new(db_dir),
         })
     }
 
@@ -166,12 +193,73 @@ impl AppDatabase {
 
     /// Alias for `conn()` — semantic hint that the caller needs mutable access (e.g. transactions).
     #[inline]
+
+    pub fn change_db_path(&self, new_dir: PathBuf) -> AppResult<()> {
+        let mut conn_guard = self.conn.lock().map_err(|e| {
+            AppError::Database(format!("Lock poisoned: {}", e))
+        })?;
+
+        // 1. Force WAL checkpoint TRUNCATE
+        conn_guard.execute("PRAGMA wal_checkpoint(TRUNCATE)", [])?;
+
+        // 2. Open temporary in-memory DB to release file lock
+        let temp_conn = Connection::open_in_memory()?;
+        let old_conn = std::mem::replace(&mut *conn_guard, temp_conn);
+        
+        // 3. Close the old connection and log if it fails
+        if let Err((_, e)) = old_conn.close() {
+            log::warn!("Failed to cleanly close old DB connection: {}", e);
+        }
+
+        // 4. Move files
+        let mut old_dir = self.db_dir.lock().unwrap();
+        let old_path = old_dir.join("boothhunter.db");
+        let new_path = new_dir.join("boothhunter.db");
+
+        if old_path.exists() && old_path != new_path {
+            if !new_dir.exists() {
+                std::fs::create_dir_all(&new_dir).map_err(|e| AppError::Database(format!("Failed to create new db dir: {}", e)))?;
+            }
+            std::fs::copy(&old_path, &new_path).map_err(|e| AppError::Database(format!("Failed to copy DB: {}", e)))?;
+        }
+
+        // 5. Connect to new DB
+        let new_conn = Connection::open(&new_path)?;
+        Self::setup_connection(&new_conn)?;
+
+        // 6. Replace temp connection with new connection
+        *conn_guard = new_conn;
+        
+        // 7. Update internal state
+        *old_dir = new_dir;
+
+        // 8. Cleanup old files (ignore errors as files might be locked, e.g. by Windows Defender)
+        if old_path.exists() && old_path != new_path {
+            if let Err(e) = std::fs::remove_file(&old_path) {
+                log::warn!("Failed to remove old DB file (safely ignored): {}", e);
+            }
+            
+            // Cleanup WAL and SHM files
+            let old_wal = old_path.with_extension("db-wal");
+            if old_wal.exists() {
+                let _ = std::fs::remove_file(old_wal);
+            }
+            let old_shm = old_path.with_extension("db-shm");
+            if old_shm.exists() {
+                let _ = std::fs::remove_file(old_shm);
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn conn_mut(&self) -> AppResult<std::sync::MutexGuard<'_, Connection>> {
         self.conn()
     }
 
     fn seed_default_avatars(conn: &Connection) -> AppResult<()> {
         let defaults: &[(&str, &str, &str)] = &[
+            // ── Existing 20 ──
             ("キプフェル", "키프펠", "Kipfel"),
             ("ルルネ", "루루네", "Rurune"),
             ("ミルティナ", "밀티나", "Miltina"),
@@ -192,6 +280,52 @@ impl AppDatabase {
             ("ラズリ", "라즈리", "Lazuli"),
             ("ルーナリット", "루나릿", "Lunalit"),
             ("ハオラン", "하오란", "Haolan"),
+            // ── New 44 (from Booth popular ranking, duplicates excluded) ──
+            ("マヌカ", "마누카", "Manuka"),
+            ("しなの", "시나노", "Shinano"),
+            ("セレスティア", "셀레스티아", "Celestia"),
+            ("真冬", "마후유", "Mafuyu"),
+            ("シフォン", "시폰", "Chiffon"),
+            ("カリン", "카린", "Karin"),
+            ("桔梗", "키쿄", "Kikyou"),
+            ("萌", "모에", "Moe"),
+            ("狛乃", "코마노", "Komano"),
+            ("リナシータ", "리나시타", "Rinasciita"),
+            ("ミルフィ", "밀피", "Milfy"),
+            ("エク", "에쿠", "Eku"),
+            ("ライム", "라임", "Lime"),
+            ("イチゴ", "이치고", "Ichigo"),
+            ("舞夜", "마이야", "Maiya"),
+            ("瑞希", "미즈키", "Mizuki"),
+            ("真央", "마오", "Mao"),
+            ("ラスク", "라스크", "Rusk"),
+            ("ルミナ", "루미나", "Lumina"),
+            ("愛莉", "아이리", "Airi"),
+            ("凪", "나기", "Nagi"),
+            ("ゾメちゃん", "조메짱", "Zome-chan"),
+            ("マリシア", "마리시아", "Marycia"),
+            ("デルタフレア", "델타플레어", "Delta Flare"),
+            ("プラム", "플럼", "Plum"),
+            ("Lapwing", "랩윙", "Lapwing"),
+            ("竜胆", "린도", "Rindou"),
+            ("墨惺", "스미세", "Sumise"),
+            ("ラムネ", "라무네", "Ramune"),
+            ("斑霞", "한카", "Hanka"),
+            ("幽狐族のお姉様", "유코족 오네사마", "Yuukozoku no Onesama"),
+            ("くうた", "쿠우타", "Kuuta"),
+            ("彼方", "카나타", "Kanata"),
+            ("此方", "코나타", "Konata"),
+            ("アッシュ", "애쉬", "Ash"),
+            ("シーカー", "시커", "Seeker"),
+            ("ネメシス", "네메시스", "Nemesis"),
+            ("ラシューシャ", "라슈샤", "Lasyusha"),
+            ("ナナセ・ノワール", "나나세 누아르", "Nanase Noir"),
+            ("龍のヨルちゃん", "요루짱", "Yoru-chan"),
+            ("うささき", "우사사키", "Usasaki"),
+            ("Bird", "버드", "Bird"),
+            ("アルエ", "알뤼에", "Alue"),
+            ("ここあ", "코코아", "Cocoa"),
+            ("サフィー", "사피", "Sapphy"),
         ];
         for (ja, ko, en) in defaults {
             conn.execute(
