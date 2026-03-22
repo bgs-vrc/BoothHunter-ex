@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import { FolderOpen, Save, Database, Tags } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import AutoCollectionManager from '../components/settings/AutoCollectionManager';
+import DataManagementSection from '../components/settings/DataManagementSection';
+
 
 export default function SettingsPage() {
   const { t } = useI18n();
@@ -169,6 +171,8 @@ export default function SettingsPage() {
             </div>
           </div>
         </section>
+
+        <DataManagementSection />
 
         <div className="pt-4">
           <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">

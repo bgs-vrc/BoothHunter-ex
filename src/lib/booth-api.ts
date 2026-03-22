@@ -234,6 +234,17 @@ export async function saveSearchHistory(keyword: string): Promise<void> {
   return invoke('save_search_history', { keyword });
 }
 
+// ── Filesystem (Text Import/Export) ──────────────────
+
+export async function readTextFile(path: string): Promise<string> {
+  return invoke<string>('read_text_file', { path });
+}
+
+export async function writeTextFile(path: string, content: string): Promise<void> {
+  return invoke('write_text_file', { path, content });
+}
+
+
 // ── Favorites (unchanged — Rust invoke) ──────────────
 
 export async function getFavorites(): Promise<FavoriteItem[]> {

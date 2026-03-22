@@ -1,7 +1,7 @@
 import type { Translations } from './types';
 
 export const en: Translations = {
-  appName: 'BoothHunter',
+  appName: 'BoothHunter-ex',
   search: {
     placeholder: 'Search Booth.pm products...',
     button: 'Search',

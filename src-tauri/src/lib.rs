@@ -97,6 +97,8 @@ pub fn run() {
             commands::settings::get_db_path,
             commands::settings::move_database,
             commands::filesystem::open_asset_folder,
+            commands::filesystem::read_text_file,
+            commands::filesystem::write_text_file,
         ])
         .setup(|app| {
             // Initialize database

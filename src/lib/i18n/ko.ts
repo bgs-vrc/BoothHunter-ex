@@ -1,7 +1,7 @@
 import type { Translations } from './types';
 
 export const ko: Translations = {
-  appName: 'BoothHunter',
+  appName: 'BoothHunter-ex',
   search: {
     placeholder: 'Booth.pm 상품 검색...',
     button: '검색',

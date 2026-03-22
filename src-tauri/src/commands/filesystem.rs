@@ -80,3 +80,13 @@ pub async fn open_asset_folder(db: State<'_, AppDatabase>, item_id: i64, item_na
 
     Ok(())
 }
+
+#[command]
+pub fn read_text_file(path: String) -> Result<String, String> {
+    std::fs::read_to_string(path).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn write_text_file(path: String, content: String) -> Result<(), String> {
+    std::fs::write(path, content).map_err(|e| e.to_string())
+}

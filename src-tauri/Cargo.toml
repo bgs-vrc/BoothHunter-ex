@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "1.0.0"
+version = "1.0.1"
 description = "BoothHunter-ex - Booth.pm VRChat 상품 검색"
 authors = ["you"]
 license = ""
@@ -25,6 +25,11 @@ tauri-plugin-shell = "2"
 tauri-plugin-http = "2"
 thiserror = "2"
 rusqlite = { version = "0.31", features = ["bundled"] }
+tauri-plugin-dialog = "2.6.0"
+tauri-plugin-opener = "2.5.3"
+dirs = "6.0.0"
+sanitize-filename = "0.6.0"
+open = "5.3.3"
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 tauri-plugin-process = "2.3.1"
